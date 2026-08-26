@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔒 Titkos Chat</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #161921;
+      --border:    #252936;
+      --accent:    #5b7fff;
+      --accent2:   #8b5fff;
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --bubble-me: #1e2a5e;
+      --bubble-other: #1e2232;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --radius:    14px;
+      --font:      'Inter', system-ui, sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      padding: 40px;
+      width: min(420px, 95vw);
+    }
+
+    .lock-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      box-shadow: 0 0 40px rgba(91,127,255,.3);
+    }
+
+    .login-title {
+      font-size: 28px; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-align: center;
+    }
+    .login-subtitle { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.5; }
+
+    .login-box {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    .field-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    .name-row { display: flex; gap: 10px; }
+    .name-btn {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 14px; font-weight: 500;
+      padding: 12px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .name-btn:hover { border-color: var(--accent); color: var(--text); }
+    .name-btn.active { border-color: var(--accent); background: rgba(91,127,255,.12); color: var(--accent); }
+
+    .login-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 15px; font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .login-btn:hover { opacity: .9; }
+    .login-btn:active { transform: scale(.98); }
+
+    .error-msg {
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 13px;
+      padding: 10px 14px;
+      text-align: center;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* ── CHAT SCREEN ── */
+    #chat-screen {
+      display: none;
+      flex-direction: column;
+      width: min(700px, 100vw);
+      height: 100dvh;
+    }
+
+    /* header */
+    .chat-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 14px;
+      flex-shrink: 0;
+    }
+    .header-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .header-info { flex: 1; }
+    .header-title { font-size: 16px; font-weight: 600; }
+    .header-status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .status-dot.offline { background: var(--red); }
+
+    .online-badges { display: flex; gap: 6px; }
+    .badge {
+      font-size: 11px; font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .badge.me { border-color: var(--accent); color: var(--accent); background: rgba(91,127,255,.08); }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* messages */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 6px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .msg-group { display: flex; flex-direction: column; gap: 2px; }
+
+    .msg-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .msg-wrap.mine { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600;
+      flex-shrink: 0;
+      margin-bottom: 2px;
+    }
+    .avatar.a { background: rgba(91,127,255,.2); color: var(--accent); }
+    .avatar.b { background: rgba(139,95,255,.2); color: var(--accent2); }
+    .avatar.hidden { visibility: hidden; }
+
+    .bubble {
+      max-width: min(340px, 70vw);
+      padding: 9px 14px;
+      border-radius: 14px;
+      font-size: 14px; line-height: 1.5;
+      word-break: break-word;
+    }
+    .mine .bubble {
+      background: var(--bubble-me);
+      border-bottom-right-radius: 4px;
+    }
+    .theirs .bubble {
+      background: var(--bubble-other);
+      border-bottom-left-radius: 4px;
+    }
+    .mine.first .bubble { border-top-right-radius: 14px; }
+    .theirs.first .bubble { border-top-left-radius: 14px; }
+
+    .msg-time {
+      font-size: 10px; color: var(--muted);
+      margin: 0 8px 2px;
+      align-self: flex-end;
+    }
+
+    .date-sep {
+      text-align: center;
+      font-size: 11px; color: var(--muted);
+      padding: 12px 0 4px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .date-sep::before, .date-sep::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    .system-msg {
+      text-align: center;
+      font-size: 12px; color: var(--muted);
+      padding: 8px 0;
+      font-style: italic;
+    }
+
+    /* typing indicator */
+    .typing-area {
+      padding: 0 20px 4px;
+      height: 22px;
+      font-size: 12px; color: var(--muted);
+      font-style: italic;
+      flex-shrink: 0;
+    }
+
+    /* input */
+    .chat-input-row {
+      padding: 12px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: flex-end;
+      flex-shrink: 0;
+    }
+    #msg-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 11px 16px;
+      resize: none; outline: none;
+      max-height: 120px; min-height: 44px;
+      line-height: 1.4;
+      transition: border-color .2s;
+    }
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+
+    .send-btn {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 12px;
+      color: #fff; font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity .2s, transform .1s;
+      flex-shrink: 0;
+    }
+    .send-btn:hover { opacity: .9; }
+    .send-btn:active { transform: scale(.95); }
+    .send-btn:disabled { opacity: .4; cursor: default; }
+
+    /* setup notice */
+    #setup-notice {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.85);
+      backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    #setup-notice.show { display: flex; }
+    .setup-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      max-width: 520px; width: 100%;
+    }
+    .setup-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; color: var(--accent); }
+    .setup-box p { font-size: 14px; line-height: 1.7; color: var(--muted); margin-bottom: 12px; }
+    .setup-box code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 8px 0 16px;
+      color: #7dd3fc;
+    }
+    .setup-close {
+      background: var(--accent);
+      border: none; border-radius: 8px;
+      color: #fff; font-family: var(--font);
+      font-size: 14px; font-weight: 600;
+      padding: 10px 20px; cursor: pointer;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="lock-icon">🔒</div>
+  <div>
+    <div class="login-title">Titkos Chat</div>
+    <div class="login-subtitle" style="margin-top:6px">Csak ketten férhetsz hozzá.<br>Írj be jelszót és válassz nevet.</div>
+  </div>
+  <div class="login-box">
+    <div>
+      <div class="field-label">Ki vagy?</div>
+      <div class="name-row">
+        <button class="name-btn" id="btn-user1" onclick="selectUser('User1')">👤 User1</button>
+        <button class="name-btn" id="btn-user2" onclick="selectUser('User2')">👤 User2</button>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Jelszó</div>
+      <input type="password" id="pw-input" placeholder="••••" maxlength="32"
+        onkeydown="if(event.key==='Enter')tryLogin()" />
+    </div>
+    <div class="error-msg" id="err-msg"></div>
+    <button class="login-btn" onclick="tryLogin()">Belépés →</button>
+  </div>
+</div>
+
+<!-- ═══ CHAT ═══ -->
+<div id="chat-screen">
+  <div class="chat-header">
+    <div class="header-icon">💬</div>
+    <div class="header-info">
+      <div class="header-title">Titkos Chat</div>
+      <div class="header-status">
+        <span class="status-dot" id="conn-dot"></span>
+        <span id="conn-label">Csatlakozás...</span>
+      </div>
+    </div>
+    <div class="online-badges" id="online-badges"></div>
+    <button class="logout-btn" onclick="logout()">Kilépés</button>
+  </div>
+
+  <div class="messages" id="messages"></div>
+  <div class="typing-area" id="typing-area"></div>
+
+  <div class="chat-input-row">
+    <textarea id="msg-input" rows="1" placeholder="Írj valamit..."
+      oninput="autoResize(this); sendTyping()"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}">
+    </textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+  </div>
+</div>
+
+<!-- ═══ SETUP NOTICE ═══ -->
+<div id="setup-notice">
+  <div class="setup-box">
+    <h2>⚠️ Firebase beállítás szükséges</h2>
+    <p>A chat Firebase Realtime Database-t használ az üzenetek tárolásához. Ez <strong>ingyenes</strong> és 5 perc alatt kész.</p>
+    <p><strong>1.</strong> Menj ide: <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">console.firebase.google.com</a><br>
+    <strong>2.</strong> Hozz létre egy projektet (pl. "titkos-chat")<br>
+    <strong>3.</strong> Add hozzá a Realtime Database-t (Test mode)<br>
+    <strong>4.</strong> Menj a projektbeállításokhoz → General → Web app → Config<br>
+    <strong>5.</strong> Cseréld le a lenti részt az <code>index.html</code>-ben:</p>
+    <code>const firebaseConfig = {
+  apiKey: "AIzaSyB-4SBrAVNVhyGiw48XsPozc4_fHogK7QM",
+  authDomain: "titkos-chat.firebaseapp.com",
+  databaseURL: "https://titkos-chat-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "titkos-chat",
+  storageBucket: "titkos-chat.firebasestorage.app",
+  messagingSenderId: "477266640053",
+  appId: "1:477266640053:web:f0328809e2875874de12fc"
+};</code>
+    <p>A Realtime Database szabályait állítsd így (Database → Rules):</p>
+    <code>{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</code>
+    <button class="setup-close" onclick="document.getElementById('setup-notice').classList.remove('show')">Értettem, most beállítom</button>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, push, onValue, set, onDisconnect, remove, serverTimestamp, query, limitToLast
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ════════════════════════════════════════════
+// 🔧 IDE CSERÉLD LE A SAJÁT FIREBASE CONFIGODRA
+const firebaseConfig = {
+  apiKey: "FIREBASE_API_KEY",
+  authDomain: "FIREBASE_PROJECT.firebaseapp.com",
+  databaseURL: "https://FIREBASE_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "FIREBASE_PROJECT",
+  storageBucket: "FIREBASE_PROJECT.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:000000000000000000000000"
+};
+// ════════════════════════════════════════════
+
+const PASSWORD = "1234";
+const MAX_USERS = 2;
+
+let db, currentUser, presenceRef, typingRef, typingTimeout;
+
+// Check if config is placeholder
+if (firebaseConfig.apiKey === "FIREBASE_API_KEY") {
+  document.getElementById("setup-notice").classList.add("show");
+}
+
+function initFirebase() {
+  const app = initializeApp(firebaseConfig);
+  db = getDatabase(app);
+}
+
+// ─── EXPOSED GLOBALS ───────────────────────
+window.selectUser = function(name) {
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + name.toLowerCase()).classList.add('active');
+  window._selectedUser = name;
+};
+
+window.tryLogin = async function() {
+  const pw = document.getElementById('pw-input').value;
+  const user = window._selectedUser;
+  const err = document.getElementById('err-msg');
+
+  if (!user) { showErr("Válassz nevet (User1 vagy User2)!"); return; }
+  if (pw !== PASSWORD) { showErr("Hibás jelszó!"); return; }
+
+  try {
+    initFirebase();
+    const onlineRef = ref(db, 'presence');
+    // one-time check for occupancy
+    const snap = await new Promise(res => onValue(onlineRef, res, { onlyOnce: true }));
+    const online = snap.val() || {};
+    const onlineList = Object.values(online);
+
+    // if the same username already connected, block
+    if (onlineList.includes(user)) {
+      showErr(`${user} már be van lépve egy másik ablakból!`); return;
+    }
+    // max 2
+    if (onlineList.length >= MAX_USERS) {
+      showErr("A chat tele van (2/2). Próbáld később!"); return;
+    }
+
+    currentUser = user;
+    presenceRef = ref(db, `presence/${user}`);
+    typingRef = ref(db, `typing/${user}`);
+
+    await set(presenceRef, user);
+    onDisconnect(presenceRef).remove();
+    onDisconnect(typingRef).remove();
+
+    startChat();
+  } catch(e) {
+    console.error(e);
+    showErr("Firebase hiba. Ellenőrizd a konfigurációt!");
+  }
+};
+
+window.logout = async function() {
+  if (presenceRef) await remove(presenceRef);
+  if (typingRef) await remove(typingRef);
+  location.reload();
+};
+
+window.sendMessage = async function() {
+  const inp = document.getElementById('msg-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = ''; autoResize(inp);
+  clearTyping();
+
+  await push(ref(db, 'messages'), {
+    user: currentUser,
+    text,
+    ts: serverTimestamp()
+  });
+};
+
+window.sendTyping = function() {
+  if (!db || !currentUser) return;
+  set(typingRef, true);
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(clearTyping, 2000);
+};
+
+window.autoResize = function(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+};
+
+// ─── CHAT INIT ─────────────────────────────
+function startChat() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('chat-screen').style.display = 'flex';
+
+  // presence
+  onValue(ref(db, 'presence'), snap => {
+    const online = snap.val() ? Object.values(snap.val()) : [];
+    updateBadges(online);
+    const dot = document.getElementById('conn-dot');
+    const lbl = document.getElementById('conn-label');
+    dot.className = 'status-dot' + (online.length < 2 ? ' offline' : '');
+    lbl.textContent = online.length === 2 ? 'Mindketten online' : `Online: ${online.join(', ')}`;
+  });
+
+  // typing
+  onValue(ref(db, 'typing'), snap => {
+    const typing = snap.val() || {};
+    const others = Object.keys(typing).filter(u => u !== currentUser);
+    document.getElementById('typing-area').textContent =
+      others.length ? `${others[0]} gépel...` : '';
+  });
+
+  // messages — last 200
+  const msgsRef = query(ref(db, 'messages'), limitToLast(200));
+  let prevDate = null;
+  onValue(msgsRef, snap => {
+    const container = document.getElementById('messages');
+    container.innerHTML = '';
+    prevDate = null;
+    const msgs = [];
+    snap.forEach(c => msgs.push({ id: c.key, ...c.val() }));
+
+    msgs.forEach((msg, i) => {
+      const prev = msgs[i - 1];
+      const mine = msg.user === currentUser;
+      const ts = msg.ts ? new Date(msg.ts) : new Date();
+      const dateStr = ts.toLocaleDateString('hu-HU', { month: 'long', day: 'numeric' });
+
+      // date separator
+      if (dateStr !== prevDate) {
+        const sep = document.createElement('div');
+        sep.className = 'date-sep';
+        sep.textContent = dateStr;
+        container.appendChild(sep);
+        prevDate = dateStr;
+      }
+
+      const isFirst = !prev || prev.user !== msg.user;
+      const wrap = document.createElement('div');
+      wrap.className = `msg-wrap ${mine ? 'mine' : 'theirs'} ${isFirst ? 'first' : ''}`;
+
+      const av = document.createElement('div');
+      av.className = `avatar ${msg.user === 'User1' ? 'a' : 'b'} ${isFirst ? '' : 'hidden'}`;
+      av.textContent = msg.user === 'User1' ? 'U1' : 'U2';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = msg.text;
+
+      const time = document.createElement('div');
+      time.className = 'msg-time';
+      time.textContent = ts.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' });
+
+      if (mine) {
+        wrap.append(time, bubble, av);
+      } else {
+        wrap.append(av, bubble, time);
+      }
+      container.appendChild(wrap);
+    });
+
+    if (!msgs.length) {
+      const sys = document.createElement('div');
+      sys.className = 'system-msg';
+      sys.textContent = '🔒 Titkosított csatorna kész. Kezdj el írni!';
+      container.appendChild(sys);
+    }
+
+    container.scrollTop = container.scrollHeight;
+  });
+}
+
+function clearTyping() {
+  if (typingRef) set(typingRef, null);
+}
+
+function updateBadges(online) {
+  const el = document.getElementById('online-badges');
+  el.innerHTML = '';
+  ['User1', 'User2'].forEach(u => {
+    const b = document.createElement('div');
+    b.className = 'badge' + (online.includes(u) ? (u === currentUser ? ' me' : '') : '');
+    b.textContent = (online.includes(u) ? '🟢 ' : '⚫ ') + u;
+    el.appendChild(b);
+  });
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+</script>
+</body>
+</html>
